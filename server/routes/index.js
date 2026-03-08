@@ -1,15 +1,17 @@
 "use strict";
 
+const apiRouter = require("./api");
 const homeRoute = require("./home");
-const { show } = require("../src/config");
-/**
- * Initialize routes
- */
+const show = require("../src/config/services/logging");
+
 const init = (app) => {
-  show.debug("Initialising routes");
+  show.info("Initialising routes");
+
+  // API routes
+  app.use("/api", apiRouter);
+
+  // SPA fallback — all other routes render index.html
   app.use("*", homeRoute);
 };
 
-module.exports = {
-  init,
-};
+module.exports = { init };

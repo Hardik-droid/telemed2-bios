@@ -1,771 +1,675 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MyHealth – Affordable Care for Everyone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyHealth – AI-Powered Telemedicine</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;700&family=Noto+Sans+Gurmukhi:wght@400;500;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Noto+Sans+Gurmukhi:wght@400;500;700&display=swap"
+    rel="stylesheet">
   <style>
-    .shadow-custom { box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-    #videoGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
-    video { width: 100%; border-radius: 1rem; background: #000; }
-    body.hi, body.pa { font-family: 'Noto Sans Devanagari', 'Noto Sans Gurmukhi', system-ui, sans-serif; }
-    
-    /* SOS Emergency Styles */
-    .sos-container {
+    :root {
+      --primary: #0077b6;
+      --secondary: #10b981;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body.hi,
+    body.pa {
+      font-family: 'Noto Sans Devanagari', 'Noto Sans Gurmukhi', system-ui, sans-serif;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    #videoGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: .75rem;
+    }
+
+    video {
       width: 100%;
-      max-width: 500px;
-      background-color: rgba(255, 255, 255, 0.95);
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      overflow: hidden;
-      animation: fadeIn 0.8s ease-out;
+      border-radius: .75rem;
+      background: #0f172a;
+      aspect-ratio: 16/9;
+      object-fit: cover;
     }
-    
-    .sos-header {
-      background: linear-gradient(to right, #2c7fb8, #1d5f8a);
-      color: white;
-      padding: 25px 20px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
+
+    ::-webkit-scrollbar {
+      width: 6px;
     }
-    
-    .sos-header::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
     }
-    
-    .sos-countdown {
-      font-size: 80px;
-      font-weight: bold;
-      color: #e74c3c;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-      margin: 20px 0;
-      animation: pulseCount 1s infinite;
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
     }
-    
-    .dispatch-notice {
-      text-align: center;
-      font-weight: 700;
-      color: #2ecc71;
-      font-size: 1.05rem;
+
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, .7)
+      }
+
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0)
+      }
+
+      100% {
+        transform: scale(.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0)
+      }
+    }
+
+    .pulse-red {
+      animation: pulse-ring 2s infinite;
+    }
+
+    @keyframes countdown-pulse {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.08)
+      }
+    }
+
+    .countdown-num {
+      animation: countdown-pulse 1s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0
+      }
+
+      100% {
+        background-position: 1000px 0
+      }
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .toast {
+      padding: .75rem 1.25rem;
+      border-radius: .75rem;
+      color: #fff;
+      font-size: .875rem;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+      transform: translateX(100%);
       opacity: 0;
-      transform: translateY(10px);
-      animation: fadeInUp 600ms ease-out forwards;
+      transition: all .3s;
+      max-width: 320px;
     }
-    
-    @keyframes pulseCount {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
+
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
     }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    .toast.success {
+      background: #10b981;
     }
-    
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    .toast.error {
+      background: #ef4444;
     }
-    
-    .dispatch-animation {
+
+    .toast.info {
+      background: #2563eb;
+    }
+
+    .toast.warning {
+      background: #f59e0b;
+    }
+
+    @keyframes typing {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+        opacity: .5
+      }
+
+      40% {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #0077b6;
       display: inline-block;
-      margin-left: 10px;
-      animation: blink 1.5s infinite;
+      animation: typing 1.4s infinite;
     }
-    
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.3; }
-      100% { opacity: 1; }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: .2s
     }
-    
-    .eta-display {
-      font-size: 18px;
-      margin-top: 10px;
-      color: #2c3e50;
-      font-weight: bold;
+
+    .typing-dot:nth-child(3) {
+      animation-delay: .4s
+    }
+
+    .chat-msg {
+      max-width: 80%;
+    }
+
+    .chat-msg.me {
+      margin-left: auto;
+    }
+
+    .chat-msg.them {
+      margin-right: auto;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .fade-up {
+      animation: fadeUp .4s ease-out forwards;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.hidden {
+      display: none !important;
     }
   </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              900: '#03045e',
+              700: '#0077b6',
+              500: '#00b4d8',
+              300: '#90e0ef',
+              100: '#caf0f8',
+            }
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
 
-  <div id="languageScreen" class="flex items-center justify-center min-h-screen p-6">
-    <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full text-center">
-      <div class="flex items-center justify-center mb-8">
-        <i class="fas fa-heartbeat text-red-500 text-5xl mr-3"></i>
-        <div>
-          <h1 class="text-3xl font-bold text-gray-800">MyHealth</h1>
-          <p class="text-sm text-gray-500">Affordable Care for Everyone</p>
+<body class="bg-gradient-to-br from-brand-100 via-white to-brand-100 min-h-screen">
+
+  <div id="toast-container"></div>
+
+  <!-- Screen 1: Language -->
+  <div id="screenLang" class="screen active min-h-screen items-center justify-center p-6">
+    <div class="glass rounded-3xl shadow-2xl p-10 max-w-md w-full text-center fade-up">
+      <div class="flex items-center justify-center mb-6">
+        <div class="bg-brand-700 rounded-2xl p-3 mr-3"><i class="fas fa-heartbeat text-white text-3xl"></i></div>
+        <div class="text-left">
+          <h1 class="text-3xl font-bold text-gray-900">MyHealth</h1>
+          <p class="text-sm text-gray-500">AI-Powered Telemedicine</p>
         </div>
       </div>
-      <h2 class="text-2xl font-semibold mb-10" data-t="selectLanguage">Select your preferred language</h2>
-      <div class="space-y-4">
-        <button onclick="setLanguage('en')" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-5 rounded-2xl text-xl transition transform hover:scale-105">English</button>
-        <button onclick="setLanguage('hi')" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-5 rounded-2xl text-xl transition transform hover:scale-105">हिंदी</button>
-        <button onclick="setLanguage('pa')" class="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-5 rounded-2xl text-xl transition transform hover:scale-105">ਪੰਜਾਬੀ</button>
-      </div>
-      <div class="mt-8">
-        <span class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium inline-flex items-center">
-          <i class="fas fa-circle text-green-500 mr-2"></i>
+      <div class="flex items-center justify-center mb-6">
+        <span
+          class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
           <span data-t="systemOnline">System Online</span>
         </span>
       </div>
-    </div>
-  </div>
-
-  <div id="app" class="hidden">
-
-    <div id="biometricScreen" class="flex items-center justify-center min-h-screen p-6">
-      <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full text-center">
-        <i class="fas fa-fingerprint text-8xl text-purple-600 mb-8"></i>
-        <h1 class="text-3xl font-bold text-gray-800 mb-4" data-t="welcomeUser">Welcome Back, Hardik</h1>
-        <p class="text-gray-600 mb-10" data-t="touchSensor">Touch the sensor or use Face ID to continue</p>
-        <button id="fingerprintBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xl py-6 px-12 rounded-2xl shadow-lg transform transition hover:scale-105">
-          <i class="fas fa-fingerprint mr-3"></i>
-          <span data-t="authenticate">Authenticate with Biometric</span>
-        </button>
-        <div id="status" class="mt-8 text-lg font-medium"></div>
+      <h2 class="text-xl font-semibold text-gray-700 mb-6" data-t="selectLanguage">Select your language</h2>
+      <div class="space-y-3" id="langButtons">
+        <button data-lang="en"
+          class="w-full bg-brand-900 hover:bg-brand-700 text-white font-semibold py-4 rounded-2xl text-lg transition-all transform hover:scale-[1.02] shadow-md"><i
+            class="fas fa-globe mr-2"></i>English</button>
+        <button data-lang="hi"
+          class="w-full bg-brand-700 hover:bg-brand-500 text-white font-semibold py-4 rounded-2xl text-lg transition-all transform hover:scale-[1.02] shadow-md">हिंदी</button>
+        <button data-lang="pa"
+          class="w-full bg-brand-500 hover:bg-brand-700 text-white font-semibold py-4 rounded-2xl text-lg transition-all transform hover:scale-[1.02] shadow-md">ਪੰਜਾਬੀ</button>
       </div>
     </div>
-
-    <div id="dashboard" class="hidden bg-white min-h-screen">
-      <header class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div class="flex items-center space-x-3">
-            <i class="fas fa-heartbeat text-red-500 text-3xl"></i>
-            <div>
-              <h1 class="text-2xl font-bold text-gray-800">MyHealth</h1>
-              <p class="text-sm text-gray-500">Affordable Care for Everyone</p>
-            </div>
-          </div>
-          <span class="bg-green-100 text-green-700 px-4 py-3 rounded-full text-sm font-medium flex items-center">
-            <i class="fas fa-circle text-green-500 mr-2"></i> <span data-t="systemOnline">System Online</span>
-          </span>
-        </div>
-      </header>
-
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">Hello, Hardik Jain</h2>
-        <p class="text-gray-600 mb-8" data-t="howCanWeHelp">How can we help you today?</p>
-
-        <div class="mb-10">
-          <button onclick="triggerSOS()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-2xl text-xl shadow-lg transition transform hover:scale-105 flex items-center justify-center space-x-3">
-            <i class="fas fa-ambulance"></i>
-            <span data-t="sos">SOS Emergency</span>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <button onclick="openTranscriber()" class="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl p-8 shadow-custom transition transform hover:scale-105 relative">
-            <i class="fas fa-microphone text-5xl mb-4"></i>
-            <p class="text-lg font-semibold" data-t="recordSymptoms">Record Your Symptoms</p>
-          </button>
-
-          <button onclick="startVideoCall()" class="bg-white hover:bg-gray-50 rounded-2xl p-8 shadow-custom border border-gray-100 transition transform hover:scale-105 relative">
-            <i class="fas fa-video text-blue-500 text-4xl mb-4"></i>
-            <p class="text-lg font-semibold mt-4" data-t="videoCall">Quick Video Call</p>
-            <span class="absolute top-4 right-4 bg-green-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">LIVE</span>
-          </button>
-
-          <button class="bg-white hover:bg-gray-50 rounded-2xl p-8 shadow-custom border border-gray-100 transition transform hover:scale-105">
-            <i class="fas fa-file-medical text-green-500 text-4xl mb-4"></i>
-            <p class="text-lg font-semibold mt-4" data-t="healthRecords">My Health Records</p>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <button class="bg-white rounded-2xl p-8 shadow-custom border border-gray-100 text-center transition transform hover:scale-105">
-            <i class="fas fa-heartbeat text-red-500 text-5xl mb-4"></i>
-            <p class="text-lg font-semibold" data-t="measureBP">Measure BP</p>
-          </button>
-          <button class="bg-white rounded-2xl p-8 shadow-custom border border-gray-100 text-center transition transform hover:scale-105">
-            <i class="fas fa-tint text-purple-500 text-5xl mb-4"></i>
-            <p class="text-lg font-semibold" data-t="sugarTest">Sugar Test</p>
-          </button>
-        </div>
-      </main>
-    </div>
-
-    <div id="sosModal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 p-4">
-      <div class="sos-container">
-        <div class="sos-header">
-          <div class="flex items-center justify-center mb-4">
-            <i class="fas fa-heartbeat text-white text-5xl mr-3"></i>
-            <div>
-              <h1 class="text-3xl font-bold text-white">MyHealth</h1>
-              <p class="text-sm text-white opacity-90">Affordable Care for Everyone</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="bg-gray-50 p-4 text-center border-b">
-          <div class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium inline-flex items-center">
-            <i class="fas fa-circle text-green-500 mr-2"></i>
-            <span data-t="systemOnline">System Online</span>
-          </div>
-        </div>
-        
-        <div class="bg-blue-50 p-8 text-center">
-          <div class="sos-countdown" id="countdown">5</div>
-          <p class="text-gray-700">Ambulance will be dispatched in</p>
-        </div>
-        
-        <div class="bg-gray-100 p-6 text-center text-xl font-medium text-gray-800 border-t border-b border-gray-200">
-          <div id="dispatchMessage">
-            Dispatching nearest unit<span class="dispatch-animation">...</span>
-          </div>
-        </div>
-        
-        <div class="p-6 bg-white">
-          <div class="text-center mb-4">
-            <p>Ambulance from: <strong id="hospitalName">Metro Medical Center</strong></p>
-            <p>Distance: <strong id="distance">9.4</strong> km</p>
-            <p class="eta-display">Estimated arrival: <strong id="eta">8-15</strong> minutes</p>
-            <p>Driver: <strong>Happy From Bihar</strong> | Contact: <strong>7549934864</strong></p>
-          </div>
-          <button id="emergencyReceived" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-lg transition">
-            Emergency Received
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="voiceModal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
-        <div class="p-6 border-b flex justify-between items-center">
-          <h3 class="text-2xl font-bold" data-t="liveTranscription">Live Voice Transcription</h3>
-          <button onclick="closeTranscriber()" class="text-red-600 hover:text-red-800 text-3xl">×</button>
-        </div>
-        <div class="flex-1 p-6 overflow-y-auto flex flex-col">
-          <p class="text-sm text-gray-500 mb-4" data-t="langNote">The transcriber automatically uses your selected language.</p>
-          <div class="flex justify-center space-x-4 mb-4">
-            <button id="startButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg" data-t="startListening">Start Listening</button>
-            <button id="stopButton" class="bg-red-500 Hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg" disabled data-t="stop">Stop</button>
-          </div>
-          <div id="status" class="text-center text-sm font-medium h-6 mb-4 text-gray-600">Awaiting Command</div>
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 min-h-[150px] overflow-auto flex-1">
-            <h4 class="text-md font-semibold text-gray-700 mb-2" data-t="transcription">Transcription:</h4>
-            <p id="outputArea" class="text-gray-800 whitespace-pre-wrap"></p>
-          </div>
-          <div class="mt-4 flex justify-center space-x-4">
-            <button id="copyBtn" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg" data-t="copyText">Copy Text</button>
-            <button id="saveBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" data-t="saveToRecords">Save To Records</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="videoCallModal" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
-        <div class="p-4 border-b flex justify-between items-center">
-          <h3 class="text-xl font-bold" data-t="videoConsultation">Video Consultation <span class="text-green-500">Live</span></h3>
-          <button onclick="endCall()" class="text-red-500 hover:text-red-700 text-3xl">×</button>
-        </div>
-        <div id="videoGrid" class="flex-1 p-4 overflow-hidden"></div>
-        <div class="p-4 border-t flex justify-center space-x-8">
-          <button onclick="toggleMic()" class="bg-gray-700 hover:bg-gray-800 text-white p-5 rounded-full"><i id="micIconVideo" class="fas fa-microphone text-2xl"></i></button>
-          <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white p-7 rounded-full"><i class="fas fa-phone-slash text-2xl"></i></button>
-          <button onclick="toggleCamera()" class="bg-gray-700 hover:bg-gray-800 text-white p-5 rounded-full"><i id="camIcon" class="fas fa-video text-2xl"></i></button>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <script>
-    // === GLOBAL CONFIGURATION ===
-    // Signalling server. Leave `SIGNALING_URL` empty to connect to the same origin
-    // (when the client is served by the project's web server at https://localhost:8080)
-    const SIGNALING_URL = ''; // set to ngrok or external URL if needed
-    let socket = null; // will be created with room/peer query
-    
-    // Connect to signalling server with room and peer metadata
-    function connectSocket({ roomId = 'default', peerId, peerName = peerId, role = 'patient' } = {}) {
-      if (!peerId) throw new Error('peerId required to connect socket');
-      // If SIGNALING_URL is empty, connect to same origin; otherwise connect to provided URL
-      socket = SIGNALING_URL ? io(SIGNALING_URL, { query: { roomId, peerId, peerName, role } }) : io({ query: { roomId, peerId, peerName, role } });
-
-      socket.on('connect', () => {
-        console.log('[SIGNAL] connected', socket.id);
+    document.getElementById('langButtons').addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-lang]');
+      if (!btn) return;
+      var lang = btn.getAttribute('data-lang');
+      try { localStorage.setItem('lang', lang); } catch(x) {}
+      document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+      document.getElementById('screenDash').classList.add('active');
+      document.body.classList.remove('en','hi','pa');
+      document.body.classList.add(lang);
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-t]').forEach(function(el) {
+        var key = el.getAttribute('data-t');
+        if (window._t) el.textContent = window._t(key);
       });
-
-      // Server sends messages via WebSocket "message" (raw payload)
-      socket.on('message', (msg) => {
-        try {
-          const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
-          handleSignallingMessage(data);
-        } catch (e) {
-          console.error('Invalid signalling message', e, msg);
-        }
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('[SIGNAL] disconnected', reason);
-      });
-    }
-
-    function sendSignalling(message) {
-      if (!socket) return console.warn('Socket not connected');
-      try {
-        socket.send(JSON.stringify(message));
-      } catch (e) {
-        console.error('Failed to send signalling message', e, message);
-      }
-    }
-
-    // WebRTC Configuration (STUN Servers)
-    const pcConfig = {
-        iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" }
-        ]
-    };
-
-    // Global Error Handler
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error('[GLOBAL ERROR]', message, 'at', source + ':' + lineno + ':' + colno, error);
-    };
-
-    // === TRANSLATIONS & LANGUAGE LOGIC ===
-    const translations = {
-      en: { 
-        selectLanguage: "Select your preferred language", 
-        systemOnline: "System Online", 
-        welcomeUser: "Welcome Back, Hardik", 
-        touchSensor: "Touch the sensor or use Face ID to continue", 
-        authenticate: "Authenticate with Biometric", 
-        howCanWeHelp: "How can we help you today?", 
-        sos: "SOS Emergency", 
-        recordSymptoms: "Record Your Symptoms", 
-        videoCall: "Quick Video Call", 
-        healthRecords: "My Health Records", 
-        measureBP: "Measure BP", 
-        sugarTest: "Sugar Test", 
-        liveTranscription: "Live Voice Transcription", 
-        langNote: "The transcriber automatically uses your selected language.", 
-        startListening: "Start Listening", 
-        stop: "Stop", 
-        transcription: "Transcription:", 
-        copyText: "Copy Text", 
-        saveToRecords: "Save To Records", 
-        videoConsultation: "Video Consultation" 
-      },
-      hi: { 
-        selectLanguage: "अपनी पसंदीदा भाषा चुनें", 
-        systemOnline: "सिस्टम ऑनलाइन", 
-        welcomeUser: "वापस स्वागत है, हार्दिक", 
-        touchSensor: "सेंसर छुएं या फेस आईडी का उपयोग करें", 
-        authenticate: "बायोमेट्रिक से प्रमाणित करें", 
-        howCanWeHelp: "आज हम आपकी कैसे मदद कर सकते हैं?", 
-        sos: "आपातकालीन SOS", 
-        recordSymptoms: "अपने लक्षण रिकॉर्ड करें", 
-        videoCall: "तुरंत वीडियो कॉल", 
-        healthRecords: "मेरे स्वास्थ्य रिकॉर्ड", 
-        measureBP: "बीपी मापें", 
-        sugarTest: "शुगर टेस्ट", 
-        liveTranscription: "लाइव वॉइस ट्रांसक्रिप्शन", 
-        langNote: "ट्रांसक्राइबर आपकी चुनी हुई भाषा का उपयोग करता है।", 
-        startListening: "सुनना शुरू करें", 
-        stop: "रुकें", 
-        transcription: "ट्रांसक्रिप्शन:", 
-        copyText: "टेक्स्ट कॉपी करें", 
-        saveToRecords: "रिकॉर्ड में सेव करें", 
-        videoConsultation: "वीडियो परामर्श" 
-      },
-      
-      pa: { 
-        selectLanguage: "ਆਪਣੀ ਪਸੰਦੀਦਾ ਭਾਸ਼ਾ ਚੁਣੋ", 
-        systemOnline: "ਸਿਸਟਮ ਆਨਲਾਰੀਨ", 
-        welcomeUser: "वਾਪस ਸवागत ਹੈ, हारदिक", 
-        touchSensor: "सैंसर ਨੂੰ छूओ ਜਾਂ फेस आईडी ਵਰਤੋਂ", 
-        authenticate: "ਬਾਇਓਮੈਟ੍ਰਿਕ ਨਾਲ ਪ੍ਰਮਾਣਿਤ ਕਰੋ", 
-        howCanWeHelp: "ਅਸੀਂ ਤੁਹਾਡੀ ਅੱਜ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦੇ ਹਾਂ?", 
-        sos: "SOS ਐਮਰਜੈਂਸੀ", 
-        recordSymptoms: "ਆਪਣੇ ਲੱਛਣ ਰਿਕਾਰਡ ਕਰੋ", 
-        videoCall: "ਤੁਰੰਤ ਵੀਡੀਓ ਕਾਲ", 
-        healthRecords: "ਮੇਰੇ ਸਿਹਤ ਰਿਕਾਰਡ", 
-        measureBP: "ਬੀ.ਪੀ. ਮਾਪੋ", 
-        sugarTest: "ਸ਼ੂਗਰ ਟੈਸਟ", 
-        liveTranscription: "ਲਾਈਵ ਵੌਇਸ ਟ੍ਰਾਂਸਕ੍ਰਿਪਸ਼ਨ", 
-        langNote: "ਟ੍ਰਾਂਸਕ੍ਰਾਈਬਰ ਆਪਣੀ ਚੁਣੀ ਭਾਸ਼ਾ ਵਰਤਦਾ ਹੈ।", 
-        startListening: "ਸੁਣਨਾ ਸ਼ੁਰੂ ਕਰੋ", 
-        stop: "ਰੋਕੋ", 
-        transcription: "ਟ੍ਰਾਂਸਕ੍ਰਿਪਸ਼ਨ:", 
-        copyText: "ਟੈਕਸਟ ਕਾਪੀ ਕਰੋ", 
-        saveToRecords: "ਰਿਕਾਰਡ ਵਿੱਚ ਸੇਵ ਕਰੋ", 
-        videoConsultation: "ਵੀਡੀਓ ਸਲਾਹ" 
-      }
-    };
-
-    function t(key) {
-      const lang = localStorage.getItem('lang') || 'en';
-      return translations[lang][key] || translations.en[key] || key;
-    }
-
-    function applyTranslations() {
-      document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.getAttribute('data-t')));
-      document.documentElement.lang = localStorage.getItem('lang') || 'en';
-      document.body.className = document.body.className.replace(/\b(hi|pa|en)\b/g, '').trim() + ' ' + (localStorage.getItem('lang') || 'en');
-    }
-
-    function setLanguage(lang) {
-      localStorage.setItem('lang', lang);
-      const langScreen = document.getElementById('languageScreen');
-      if (langScreen) langScreen.remove();
-      const appEl = document.getElementById('app');
-      if (appEl) appEl.classList.remove('hidden');
-      applyTranslations();
-      setTimeout(() => document.getElementById('fingerprintBtn')?.click(), 800);
-    }
-
-    window.addEventListener('load', () => {
-      const saved = localStorage.getItem('lang');
-      if (saved && ['en','hi','pa'].includes(saved)) {
-        const langScreen = document.getElementById('languageScreen');
-        if (langScreen) langScreen.remove();
-        const appEl = document.getElementById('app');
-        if (appEl) appEl.classList.remove('hidden');
-        applyTranslations();
-        setTimeout(() => document.getElementById('fingerprintBtn')?.click(), 600);
-      }
     });
-
-    // === BIOMETRIC LOGIN ===
-    document.getElementById('fingerprintBtn')?.addEventListener('click', async () => {
-      const status = document.getElementById('status');
-      status.innerHTML = "<span class='text-blue-600'>Authenticating...</span>";
-      if (window.PublicKeyCredential) {
-        try { 
-          await navigator.credentials.get({ 
-            publicKey: { 
-              challenge: new Uint8Array(32), 
-              userVerification: "required" 
-            }
-          }); 
-          loginSuccess(); 
-        } catch { 
-          setTimeout(loginSuccess, 1000); 
-        }
-      } else {
-        setTimeout(loginSuccess, 1200);
-      }
-    });
-
-    function loginSuccess() {
-      const statusEl = document.getElementById('status');
-      if (statusEl) statusEl.innerHTML = "<span class='text-green-600'>Login Successful!</span>";
-      setTimeout(() => {
-        const bio = document.getElementById('biometricScreen');
-        if (bio) {
-          bio.style.transition = 'opacity 0.6s';
-          bio.style.opacity = '0';
-          setTimeout(() => { 
-            bio.remove(); 
-            const dash = document.getElementById('dashboard'); 
-            if (dash) dash.classList.remove('hidden'); 
-          }, 600);
-        } else {
-          const dash = document.getElementById('dashboard'); 
-          if (dash) dash.classList.remove('hidden');
-        }
-      }, 800);
-    }
-
-    // === SOS EMERGENCY ===
-    let sosCountdown;
-    let sosCountdownValue = 5;
-    
-    function triggerSOS() {
-      document.getElementById('sosModal').classList.remove('hidden');
-      sosCountdownValue = 5;
-      document.getElementById('countdown').textContent = sosCountdownValue;
-      document.getElementById('countdown').style.color = "#e74c3c";
-      document.getElementById('dispatchMessage').innerHTML = "Dispatching nearest unit<span class='dispatch-animation'>...</span>";
-      
-      sosCountdown = setInterval(() => {
-        sosCountdownValue--;
-        document.getElementById('countdown').textContent = sosCountdownValue;
-        if (sosCountdownValue <= 0) {
-          clearInterval(sosCountdown);
-          dispatchAmbulance();
-        }
-      }, 1000);
-    }
-    
-    function dispatchAmbulance() {
-      document.getElementById('countdown').textContent = "0";
-      document.getElementById('countdown').style.color = "#2ecc71";
-      document.getElementById('dispatchMessage').innerHTML = "<div class='dispatch-notice'>Ambulance dispatched! <span style='color:#2ecc71;'>✓</span></div>";
-    }
-    
-    function closeSOS() {
-      clearInterval(sosCountdown);
-      document.getElementById('sosModal').classList.add('hidden');
-    }
-    
-    document.getElementById('emergencyReceived')?.addEventListener('click', function() {
-      alert('Thank you for using MyHealth. We hope the patient recovers quickly.');
-      closeSOS();
-    });
-
-    // === VOICE TRANSCRIPTION ===
-    const startButton = document.getElementById('startButton');
-    const stopButton = document.getElementById('stopButton');
-    const outputArea = document.getElementById('outputArea');
-    const statusDiv = document.getElementById('status');
-    let finalTranscript = '', isListening = false;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = SpeechRecognition ? new SpeechRecognition() : null;
-
-    if (recognition) {
-      recognition.continuous = true; 
-      recognition.interimResults = true;
-      recognition.onresult = e => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) finalTranscript += t + '.\n';
-          else interim += t;
-        }
-        outputArea.textContent = finalTranscript + interim;
-      };
-      recognition.onstart = () => { 
-        statusDiv.textContent = 'Listening...'; 
-        startButton.disabled = true; 
-        stopButton.disabled = false; 
-      };
-      recognition.onend = () => { 
-        if (isListening) setTimeout(() => recognition.start(), 300); 
-        else { 
-          startButton.disabled = false; 
-          stopButton.disabled = true; 
-        } 
-      };
-      recognition.onerror = e => { 
-        statusDiv.textContent = 'Error: ' + e.error; 
-        isListening = false; 
-        startButton.disabled = false; 
-        stopButton.disabled = true; 
-      };
-    }
-
-    function startRecognition() { 
-      if (recognition) { 
-        recognition.lang = localStorage.getItem('lang') === 'hi' ? 'hi-IN' : 
-                           localStorage.getItem('lang') === 'pa' ? 'pa-IN' : 'en-US'; 
-        recognition.start(); 
-        isListening = true; 
-      } 
-    }
-    
-    function stopRecognition() { 
-      isListening = false; 
-      if (recognition) recognition.stop(); 
-    }
-
-    function openTranscriber() { 
-      document.getElementById('voiceModal').classList.remove('hidden'); 
-      setTimeout(startRecognition, 500); 
-    }
-    
-    function closeTranscriber() { 
-      stopRecognition(); 
-      document.getElementById('voiceModal').classList.add('hidden'); 
-    }
-
-    document.getElementById('copyBtn')?.addEventListener('click', () => 
-      navigator.clipboard.writeText(outputArea.textContent).then(() => alert('Copied!'))
-    );
-    
-    document.getElementById('saveBtn')?.addEventListener('click', () => 
-      alert('Saved to records!')
-    );
-
-    startButton?.addEventListener('click', startRecognition);
-    stopButton?.addEventListener('click', stopRecognition);
-
-    // === VIDEO CALL (FIXED & WORKING) ===
-    let localStream = null;
-    let remoteStream = null;
-    let peerConnection = null;
-    const videoGrid = document.getElementById('videoGrid');
-    let username = '';
-    let targetUser = '';
-    const knownPeers = new Set();
-
-    function addVideoStream(id, stream, isLocal = false) {
-      let video = document.getElementById(id);
-      if (!video) {
-        video = document.createElement('video');
-        video.id = id;
-        videoGrid.appendChild(video);
-      }
-      video.srcObject = stream;
-      video.autoplay = true;
-      video.playsInline = true;
-      video.muted = isLocal;
-      if (isLocal) video.classList.add('border-4', 'border-blue-500');
-      video.classList.add('rounded-xl');
-    }
-
-    // NOTE: Ensure pcConfig is used here
-    function createPeerConnection() {
-      if (peerConnection) peerConnection.close();
-      peerConnection = new RTCPeerConnection(pcConfig); // uses Global pcConfig
-      
-      peerConnection.onicecandidate = event => {
-        if (event.candidate && targetUser) {
-          console.log('[SIGNAL] Sending ICE', { from: username, to: targetUser });
-          sendSignalling({ type: 'candidate', peer: targetUser, candidate: event.candidate });
-        }
-      };
-      
-      peerConnection.ontrack = event => {
-        if (!remoteStream) {
-          remoteStream = new MediaStream();
-          addVideoStream('remoteVideo', remoteStream);
-        }
-        remoteStream.addTrack(event.track);
-      };
-    }
-
-    async function startVideoCall() {
-      document.getElementById('videoCallModal').classList.remove('hidden');
-      videoGrid.innerHTML = '';
-      remoteStream = null;
-      
-      if (!username) {
-        username = prompt('Enter your username:');
-        const roomId = prompt('Enter room id to join (same for both peers):', 'default');
-        connectSocket({ roomId, peerId: username, peerName: username, role: 'patient' });
-      }
-      
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      addVideoStream('localVideo', localStream, true);
-
-      // Wait briefly for server to inform about peers, then ask which peer to call
-      await new Promise((r) => setTimeout(r, 400));
-      const others = Array.from(knownPeers).filter((p) => p !== username);
-      let dest = null;
-      if (others.length > 0) {
-        dest = prompt('Call which user? Available: ' + others.join(', '));
-      } else {
-        dest = prompt('No peers detected yet. Enter target peer id to call (must be same room):');
-      }
-      if (dest) {
-        targetUser = dest;
-        createPeerConnection();
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-        try {
-          const offer = await peerConnection.createOffer();
-          await peerConnection.setLocalDescription(offer);
-          console.log('[SIGNAL] Sending offer', { from: username, to: targetUser });
-          sendSignalling({ type: 'offer', peer: targetUser, offer: peerConnection.localDescription });
-        } catch (e) {
-          console.error('Offer error', e);
-        }
-      } else {
-        alert('No target chosen; call cancelled.');
-      }
-    }
-
-    // centralised signalling message handler (server sends JSON messages via socket.send)
-    async function handleSignallingMessage(data) {
-      switch (data.type) {
-        case 'login':
-          // server informs about a peer in the room
-          if (data.details && data.details.peerId) {
-            knownPeers.add(data.details.peerId);
-            console.log('[SIGNAL] peer login', data.details.peerId);
-          }
-          break;
-        case 'offer': {
-          const from = data.peer || data.from;
-          const offer = data.offer;
-          targetUser = from;
-          if (peerConnection) peerConnection.close();
-          createPeerConnection();
-          if (localStream) {
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-          } else {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            addVideoStream('localVideo', localStream, true);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-          }
-          try {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            sendSignalling({ type: 'answer', peer: from, answer: peerConnection.localDescription });
-          } catch (e) {
-            console.error('Offer/Answer error', e);
-          }
-          break;
-        }
-        case 'answer': {
-          const answer = data.answer;
-          if (peerConnection) {
-            try { await peerConnection.setRemoteDescription(new RTCSessionDescription(answer)); } catch (e) { console.error('Set remote answer error', e); }
-          }
-          break;
-        }
-        case 'candidate': {
-          const candidate = data.candidate;
-          if (peerConnection && candidate) {
-            try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { console.error('ICE error', e); }
-          }
-          break;
-        }
-        case 'notify': {
-          console.warn('[SIGNAL] notify', data.notification);
-          break;
-        }
-        case 'peerLeft': {
-          console.log('[SIGNAL] peerLeft', data.peerId);
-          knownPeers.delete(data.peerId);
-          break;
-        }
-        default:
-          console.warn('Unknown signalling message', data);
-      }
-    }
-
-    function toggleMic() {
-      if (localStream) {
-        const enabled = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-        document.getElementById('micIconVideo').classList.toggle('fa-microphone-slash', !enabled);
-      }
-    }
-
-    function toggleCamera() {
-      if (localStream) {
-        const enabled = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-        document.getElementById('camIcon').classList.toggle('fa-video-slash', !enabled);
-      }
-    }
-
-    function endCall() {
-      if (peerConnection) peerConnection.close();
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
-      videoGrid.innerHTML = '';
-      document.getElementById('videoCallModal').classList.add('hidden');
-      peerConnection = null;
-      remoteStream = null;
-      localStream = null;
-    }
   </script>
+
+  <!-- Screen 2: Biometric -->
+  <div id="screenBio" class="screen min-h-screen items-center justify-center p-6">
+    <div class="glass rounded-3xl shadow-2xl p-10 max-w-sm w-full text-center fade-up">
+      <div class="relative inline-block mb-6">
+        <div
+          class="w-24 h-24 rounded-full bg-gradient-to-br from-brand-300 to-brand-700 flex items-center justify-center mx-auto">
+          <i class="fas fa-fingerprint text-white text-5xl"></i>
+        </div>
+        <span
+          class="absolute bottom-0 right-0 w-7 h-7 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+          <i class="fas fa-check text-white text-xs"></i>
+        </span>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900 mb-1" data-t="welcomeUser">Welcome Back</h1>
+      <p class="text-gray-500 text-sm mb-8" data-t="touchSensor">Touch the sensor or use Face ID</p>
+      <button id="fingerprintBtn"
+        class="w-full bg-gradient-to-r from-brand-700 to-brand-900 hover:from-brand-900 hover:to-brand-900 text-white font-semibold py-4 rounded-2xl text-lg transition-all transform hover:scale-[1.02] shadow-lg">
+        <i class="fas fa-fingerprint mr-2"></i><span data-t="authenticate">Authenticate</span>
+      </button>
+      <p id="bioStatus" class="mt-4 text-sm font-medium text-gray-500 h-5"></p>
+    </div>
+  </div>
+
+  <!-- Screen 3: Dashboard -->
+  <div id="screenDash" class="screen min-h-screen flex-col">
+    <header class="glass border-b border-white/50 sticky top-0 z-40 shadow-sm">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+          <div class="bg-brand-700 rounded-xl p-2"><i class="fas fa-heartbeat text-white text-xl"></i></div>
+          <div>
+            <h1 class="text-lg font-bold text-gray-900">MyHealth</h1>
+            <p class="text-xs text-gray-400">AI-Powered Telemedicine</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span
+            class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium hidden sm:inline-flex items-center">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+            <span data-t="systemOnline">Online</span>
+          </span>
+          <button data-action="showAIChat"
+            class="bg-brand-100 hover:bg-brand-300 text-brand-900 px-3 py-2 rounded-xl text-sm font-medium transition-colors">
+            <i class="fas fa-robot mr-1"></i><span class="hidden sm:inline">AI Assistant</span>
+          </button>
+        </div>
+      </div>
+    </header>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
+      <div class="mb-6 fade-up">
+        <h2 class="text-2xl font-bold text-gray-900">Hello, <span id="userName">Hardik</span> 👋</h2>
+        <p class="text-gray-500 mt-1" data-t="howCanWeHelp">How can we help you today?</p>
+      </div>
+      <div class="mb-6 fade-up">
+        <button data-action="triggerSOS"
+          class="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-5 rounded-2xl text-xl shadow-lg transition-all transform hover:scale-[1.01] flex items-center justify-center gap-3 pulse-red">
+          <i class="fas fa-ambulance text-2xl"></i><span data-t="sos">SOS Emergency</span>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 fade-up">
+        <button data-action="openVideoCallSetup"
+          class="relative glass hover:shadow-xl rounded-2xl p-6 text-left transition-all transform hover:scale-[1.02] border border-brand-100 group">
+          <div class="flex items-start justify-between mb-3">
+            <div class="bg-brand-100 group-hover:bg-brand-700 rounded-xl p-3 transition-colors"><i
+                class="fas fa-video text-brand-700 group-hover:text-white text-xl transition-colors"></i></div>
+            <span
+              class="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full animate-pulse font-semibold">LIVE</span>
+          </div>
+          <p class="font-semibold text-gray-900" data-t="videoCall">Video Consultation</p>
+          <p class="text-sm text-gray-400 mt-1">Connect with a doctor now</p>
+        </button>
+        <button data-action="openTranscriber"
+          class="relative glass hover:shadow-xl rounded-2xl p-6 text-left transition-all transform hover:scale-[1.02] border border-brand-100 group">
+          <div class="bg-brand-100 group-hover:bg-brand-500 rounded-xl p-3 transition-colors inline-block mb-3"><i
+              class="fas fa-microphone text-brand-500 group-hover:text-white text-xl transition-colors"></i></div>
+          <p class="font-semibold text-gray-900" data-t="recordSymptoms">Record Symptoms</p>
+          <p class="text-sm text-gray-400 mt-1">Voice + AI transcription</p>
+        </button>
+        <button data-action="openSymptomChecker"
+          class="relative glass hover:shadow-xl rounded-2xl p-6 text-left transition-all transform hover:scale-[1.02] border border-brand-100 group">
+          <div class="bg-brand-100 group-hover:bg-brand-900 rounded-xl p-3 transition-colors inline-block mb-3"><i
+              class="fas fa-brain text-brand-900 group-hover:text-white text-xl transition-colors"></i></div>
+          <p class="font-semibold text-gray-900">AI Symptom Check</p>
+          <p class="text-sm text-gray-400 mt-1">Powered by Claude AI</p>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 fade-up">
+        <button class="glass hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:scale-[1.02]">
+          <i class="fas fa-file-medical text-emerald-500 text-3xl mb-2"></i>
+          <p class="text-sm font-semibold text-gray-700" data-t="healthRecords">Health Records</p>
+        </button>
+        <button class="glass hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:scale-[1.02]">
+          <i class="fas fa-heartbeat text-red-400 text-3xl mb-2"></i>
+          <p class="text-sm font-semibold text-gray-700" data-t="measureBP">Measure BP</p>
+        </button>
+        <button class="glass hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:scale-[1.02]">
+          <i class="fas fa-tint text-purple-400 text-3xl mb-2"></i>
+          <p class="text-sm font-semibold text-gray-700" data-t="sugarTest">Sugar Test</p>
+        </button>
+        <button class="glass hover:shadow-lg rounded-2xl p-5 text-center transition-all hover:scale-[1.02]">
+          <i class="fas fa-pills text-amber-400 text-3xl mb-2"></i>
+          <p class="text-sm font-semibold text-gray-700">Medications</p>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: SOS -->
+  <div id="modalSOS" class="modal-overlay hidden">
+    <div class="glass rounded-3xl shadow-2xl w-full max-w-md overflow-hidden fade-up">
+      <div class="bg-gradient-to-r from-red-600 to-rose-700 p-6 text-center">
+        <i class="fas fa-ambulance text-white text-4xl mb-2"></i>
+        <h2 class="text-2xl font-bold text-white">Emergency SOS</h2>
+      </div>
+      <div class="p-6 text-center">
+        <p class="text-gray-600 mb-2">Ambulance dispatching in</p>
+        <div id="sosCountdown" class="countdown-num text-8xl font-black text-red-500 my-3">5</div>
+        <div id="sosDispatchMsg" class="text-gray-700 text-lg font-medium mb-4">Locating nearest unit<span
+            id="dotsAnim">...</span></div>
+        <div class="bg-gray-50 rounded-xl p-4 text-sm text-left space-y-1 mb-4">
+          <p><i class="fas fa-hospital text-brand-500 w-5"></i> <strong id="sosHospital">Metro Medical Centre</strong>
+          </p>
+          <p><i class="fas fa-map-marker-alt text-red-500 w-5"></i> Distance: <strong id="sosDistance">9.4 km</strong>
+          </p>
+          <p><i class="fas fa-clock text-amber-500 w-5"></i> ETA: <strong id="sosETA">8-15 min</strong></p>
+          <p><i class="fas fa-user text-gray-500 w-5"></i> Driver: <strong>Happy Singh</strong> | <strong>+91 75499
+              34864</strong></p>
+        </div>
+        <button id="sosReceived"
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors">
+          <i class="fas fa-check mr-2"></i>Emergency Acknowledged
+        </button>
+        <button data-action="closeSOS" class="w-full mt-2 text-gray-500 hover:text-gray-700 text-sm py-2">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Voice Transcriber -->
+  <div id="modalVoice" class="modal-overlay hidden">
+    <div class="glass rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] fade-up">
+      <div class="p-5 border-b flex justify-between items-center">
+        <div>
+          <h3 class="text-xl font-bold text-gray-900" data-t="liveTranscription">Voice Transcription</h3>
+          <p class="text-sm text-gray-400">AI-powered clinical notes</p>
+        </div>
+        <button data-action="closeTranscriber"
+          class="w-9 h-9 rounded-full bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 flex items-center justify-center transition-colors"><i
+            class="fas fa-times"></i></button>
+      </div>
+      <div class="flex-1 p-5 overflow-y-auto flex flex-col gap-4">
+        <div class="flex gap-3 justify-center">
+          <button id="startButton" data-action="startRecognition"
+            class="bg-brand-700 hover:bg-brand-900 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-40">
+            <i class="fas fa-microphone"></i><span data-t="startListening">Start</span>
+          </button>
+          <button id="stopButton" data-action="stopRecognition" disabled
+            class="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-40">
+            <i class="fas fa-stop"></i><span data-t="stop">Stop</span>
+          </button>
+        </div>
+        <div id="voiceStatus" class="text-center text-sm font-medium text-gray-500">Tap Start to begin</div>
+        <div class="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50 flex-1 min-h-[120px]">
+          <p id="transcriptOutput" class="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed"></p>
+        </div>
+        <div id="aiSummarySection" class="hidden">
+          <div class="bg-brand-100 rounded-xl p-4 border border-brand-100">
+            <div class="flex items-center gap-2 mb-2"><i class="fas fa-robot text-brand-700"></i><span
+                class="font-semibold text-brand-900 text-sm">AI Clinical Summary</span></div>
+            <div id="aiSummaryContent" class="text-sm text-gray-700"></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="copyTranscriptBtn"
+            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"><i
+              class="fas fa-copy mr-1"></i><span data-t="copyText">Copy</span></button>
+          <button id="aiSummariseBtn"
+            class="flex-1 bg-brand-700 hover:bg-brand-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"><i
+              class="fas fa-brain mr-1"></i>AI Summarise</button>
+          <button id="saveTranscriptBtn"
+            class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"><i
+              class="fas fa-save mr-1"></i><span data-t="saveToRecords">Save</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: AI Symptom Checker -->
+  <div id="modalSymptom" class="modal-overlay hidden">
+    <div class="glass rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] fade-up">
+      <div class="p-5 border-b flex justify-between items-center">
+        <div>
+          <h3 class="text-xl font-bold text-gray-900">AI Symptom Checker</h3>
+          <p class="text-sm text-gray-400">Powered by Claude AI</p>
+        </div>
+        <button data-action="closeSymptomChecker"
+          class="w-9 h-9 rounded-full bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 flex items-center justify-center transition-colors"><i
+            class="fas fa-times"></i></button>
+      </div>
+      <div class="flex-1 p-5 overflow-y-auto flex flex-col gap-4">
+        <textarea id="symptomInput" rows="4"
+          placeholder="Describe your symptoms in detail... (e.g. headache and fever for 2 days, temperature 102F)"
+          class="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"></textarea>
+        <button id="analyseBtn" data-action="analyseSymptoms"
+          class="w-full bg-brand-700 hover:bg-brand-900 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+          <i class="fas fa-search-plus"></i>Analyse Symptoms
+        </button>
+        <div id="symptomLoading" class="hidden flex-col items-center py-8">
+          <div class="flex gap-1 mb-3">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+          <p class="text-sm text-gray-500">Claude AI is analysing your symptoms...</p>
+        </div>
+        <div id="symptomResult" class="hidden flex flex-col gap-3">
+          <div id="urgencyBadge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold">
+          </div>
+          <div id="symptomSummary" class="bg-gray-50 rounded-xl p-4 text-sm text-gray-700"></div>
+          <div id="symptomRecs" class="space-y-2"></div>
+          <div id="emergencyAlert" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700"><i
+              class="fas fa-exclamation-triangle mr-2"></i>Seek emergency care immediately.</div>
+          <p id="symptomDisclaimer" class="text-xs text-gray-400 italic"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: AI Chat -->
+  <div id="modalAIChat" class="modal-overlay hidden">
+    <div class="glass rounded-3xl shadow-2xl w-full max-w-lg flex flex-col h-[80vh] fade-up">
+      <div class="p-4 border-b flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-brand-100 rounded-xl p-2"><i class="fas fa-robot text-brand-900 text-lg"></i></div>
+          <div>
+            <h3 class="font-bold text-gray-900">AI Health Assistant</h3>
+            <p class="text-xs text-gray-400">Powered by Claude</p>
+          </div>
+        </div>
+        <button data-action="closeAIChat"
+          class="w-9 h-9 rounded-full bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 flex items-center justify-center transition-colors"><i
+            class="fas fa-times"></i></button>
+      </div>
+      <div id="aiChatMessages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
+        <div class="chat-msg them">
+          <div class="bg-brand-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-700">Hello! I am your AI health
+            assistant. I can help answer general health questions, explain symptoms, or guide you to the right care. How
+            can I help?</div>
+        </div>
+      </div>
+      <div class="p-4 border-t">
+        <div class="flex gap-2">
+          <input id="aiChatInput" type="text" placeholder="Ask a health question..."
+            class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            data-enter-action="sendAIChat">
+          <button data-action="sendAIChat"
+            class="bg-brand-700 hover:bg-brand-900 text-white px-4 py-2.5 rounded-xl transition-colors"><i
+              class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Video Setup -->
+  <div id="modalVideoSetup" class="modal-overlay hidden">
+    <div class="glass rounded-3xl shadow-2xl w-full max-w-sm p-6 fade-up">
+      <h3 class="text-xl font-bold text-gray-900 mb-1">Join Video Call</h3>
+      <p class="text-sm text-gray-400 mb-5">Enter your name and room ID</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-1 block">Your Name</label>
+          <input id="vcName" type="text" placeholder="e.g. Hardik"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white">
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-1 block">Room ID</label>
+          <div class="flex gap-2">
+            <input id="vcRoom" type="text" placeholder="e.g. doctor-room-123"
+              class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white">
+            <button data-action="generateRoomId"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 rounded-xl text-xs font-medium transition-colors">Random</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-1 block">Role</label>
+          <select id="vcRole"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-white">
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button data-action="closeVideoSetup"
+          class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors">Cancel</button>
+        <button data-action="startVideoCall"
+          class="flex-1 bg-brand-700 hover:bg-brand-900 text-white font-semibold py-3 rounded-xl transition-colors"><i
+            class="fas fa-video mr-2"></i>Join</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Video Room -->
+  <div id="modalVideo" class="modal-overlay hidden" style="padding:0;align-items:stretch;">
+    <div class="w-full h-full flex flex-col bg-gray-900">
+      <div class="flex justify-between items-center px-4 py-3 bg-gray-800">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 text-white"><i class="fas fa-video text-emerald-400"></i><span
+              class="font-semibold text-sm">Video Consultation</span></div>
+          <span id="vcRoomBadge" class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="vcPeerCount" class="text-xs text-gray-400"></span>
+          <button data-action="toggleChat"
+            class="text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-sm transition-colors"><i
+              class="fas fa-comment mr-1"></i>Chat</button>
+        </div>
+      </div>
+      <div class="flex flex-1 overflow-hidden">
+        <div class="flex-1 p-3 overflow-y-auto">
+          <div id="videoGrid"></div>
+          <div id="waitingMessage" class="flex flex-col items-center justify-center text-center py-20">
+            <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4"><i
+                class="fas fa-user-clock text-gray-400 text-2xl"></i></div>
+            <p class="text-gray-400">Waiting for others to join...</p>
+            <p id="shareRoomHint" class="text-gray-500 text-sm mt-2"></p>
+          </div>
+        </div>
+        <div id="chatPanel" class="hidden w-72 bg-gray-800 flex flex-col border-l border-gray-700">
+          <div class="p-3 border-b border-gray-700 text-sm font-semibold text-gray-200">Room Chat</div>
+          <div id="chatMessages" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2"></div>
+          <div class="p-3 border-t border-gray-700 flex gap-2">
+            <input id="chatInput" type="text" placeholder="Message..."
+              class="flex-1 bg-gray-700 border-none rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              data-enter-action="sendChatMessage">
+            <button data-action="sendChatMessage"
+              class="bg-brand-700 text-white px-3 rounded-lg text-sm transition-colors hover:bg-brand-900"><i
+                class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-800 border-t border-gray-700 px-4 py-3 flex justify-center items-center gap-4">
+        <button id="btnMic" data-action="toggleMic"
+          class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition-colors"
+          title="Toggle Mic"><i id="micIcon" class="fas fa-microphone text-lg"></i></button>
+        <button id="btnCam" data-action="toggleCamera"
+          class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition-colors"
+          title="Toggle Camera"><i id="camIcon" class="fas fa-video text-lg"></i></button>
+        <button data-action="endCall"
+          class="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors shadow-lg"
+          title="End Call"><i class="fas fa-phone-slash text-xl"></i></button>
+        <button data-action="shareScreen"
+          class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition-colors"
+          title="Share Screen"><i class="fas fa-desktop text-lg"></i></button>
+        <button data-action="copyRoomLink"
+          class="w-12 h-12 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center transition-colors"
+          title="Copy Room Link"><i class="fas fa-link text-lg"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./src/app.js?v=4"></script>
 </body>
+
 </html>

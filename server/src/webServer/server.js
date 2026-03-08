@@ -1,42 +1,51 @@
-"use strict";
+'use strict';
 
-const { express, show, stats, config } = require("../config");
-const spdy = require("spdy");
-const { initSocketServer, store } = require("../lib");
-const { Server } = require("socket.io");
-const routes = require("../../routes");
+const { express, show, stats, config } = require('../config');
+const https = require('https');
+const http = require('http');
+const { initSocketServer } = require('../lib');
+const { Server } = require('socket.io');
+const routes = require('../../routes');
 
 let server = null;
 
-/**
- * Start HTTP/2 server, database, socket.io connection
- * Load routes, services, check memory usage
- * @function
- */
 const listen = () => {
   const app = express.init();
 
-  server = spdy
-    .createServer(config.sslOptions, app)
-    .listen(config.port, config.ip);
-  show.debug(`Listening at https://${config.host}:${config.port}`);
-  const io = new Server(server, {});
-  // socket.listen(server);
+  // Use native https - spdy (HTTP/2) is deprecated on Node 22+
+  server = https.createServer(config.sslOptions, app);
+  server.listen(config.port, config.ip, () => {
+    show.info('Listening at https://' + config.host + ':' + config.port);
+  });
+
+  server.on('error', (err) => {
+    show.error('Server error: ' + err.message);
+    process.exit(1);
+  });
+
+  const io = new Server(server, {
+    cors: { origin: true, credentials: true },
+    pingTimeout: 30000,
+    pingInterval: 10000,
+  });
   initSocketServer(io);
   routes.init(app);
   stats.memory();
+
+  // Graceful shutdown
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 };
 
-/**
- * Close server, database connection
- * @function
- */
-const close = () => {
-  server.close();
-  show.debug("Server down");
+const shutdown = () => {
+  show.info('Graceful shutdown initiated...');
+  server.close(() => {
+    show.info('Server closed.');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
 };
 
-module.exports = {
-  listen,
-  close,
-};
+const close = () => server && server.close();
+
+module.exports = { listen, close };

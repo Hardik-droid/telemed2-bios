@@ -1,30 +1,37 @@
 "use strict";
 
 const winston = require("winston");
+const path = require("path");
 
-/**
- * Logging configuration (winston)
- */
-const show = winston.createLogger({
-  level: "debug",
-  format: winston.format.combine(
-    winston.format.colorize(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({
-      filename: "error.log",
-      level: "error",
-    }),
-  ],
-});
-
-show.add(
-  new winston.transports.Console({
-    format: winston.format.simple(),
+const logFormat = winston.format.combine(
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.errors({ stack: true }),
+  winston.format.printf(({ level, message, timestamp, stack }) => {
+    return stack
+      ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`
+      : `[${timestamp}] ${level.toUpperCase()}: ${message}`;
   })
 );
 
-// console.log(show);
+const show = winston.createLogger({
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
+  format: logFormat,
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize(), logFormat),
+    }),
+    new winston.transports.File({
+      filename: path.join(process.cwd(), "logs/error.log"),
+      level: "error",
+      maxsize: 5 * 1024 * 1024,
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: path.join(process.cwd(), "logs/combined.log"),
+      maxsize: 10 * 1024 * 1024,
+      maxFiles: 5,
+    }),
+  ],
+});
 
 module.exports = show;

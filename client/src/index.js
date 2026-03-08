@@ -18,6 +18,8 @@ const mediaConstraints = {
 };
 let cignal;
 
+// ...existing code...
+
 document.getElementById("otherElements").hidden = true;
 const usernameShow = document.querySelector("#showLocalUserName");
 const showAllUsers = document.querySelector("#allUsers");
